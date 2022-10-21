@@ -21,5 +21,9 @@
 	  <Folder Include="Migrations\" />
 	  <Folder Include="Scopes\" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\CptClientShared\CptClientShared\CptClientShared.csproj" />
+	</ItemGroup>
 	
 </Project>

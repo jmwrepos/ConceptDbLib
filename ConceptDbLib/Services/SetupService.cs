@@ -1,28 +1,25 @@
-﻿using ConceptDbLib.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CptClientShared;
+using CptClientShared.Entities;
 
 namespace ConceptDbLib.Services
 {
     internal class SetupService
     {
-        private readonly ConceptContext _db;
+        private readonly CptDbProvider _dbProvider;
+        private ConceptContext _db => _dbProvider.Context;
         private readonly string _secKey;
         private string confirmKey;
-        public SetupService(ConceptContext db, string secKey)
+        public SetupService(CptDbProvider dbProvider, string secKey)
         {
-            _db = db;
+            _dbProvider = dbProvider;
             _secKey = secKey;
             confirmKey = Guid.NewGuid().ToString();
         }
-        private ConceptDbResponse ReqDbInitializeRequestedOk => new(ConceptDbResponseId.Information, "Request Received. Be aware that this process will result in complete loss of data. To confirm, submit a 'DbInitialize' request using the following key", new() { confirmKey });
-        private ConceptDbResponse NotAuthorized => new(ConceptDbResponseId.Error, "Request could not be authorized.", new() { string.Empty });
-        private ConceptDbResponse DbInitializeOk => new(ConceptDbResponseId.Success, "Database initialization complete.", new() { string.Empty });
-        private ConceptDbResponse DbConnected => new(ConceptDbResponseId.Information, "Database Connected", new() { string.Empty });
-        private ConceptDbResponse DbNotConnected => new(ConceptDbResponseId.Information, "Database Not Reachable", new() { string.Empty });
+        private ConceptDbResponse ReqDbInitializeRequestedOk => new(ConceptDbResponseId.Success, "Request Received. Be aware that this process will result in complete loss of data. To confirm, submit a 'DbInitialize' request using the following key", new() { confirmKey });
+        private static ConceptDbResponse NotAuthorized => new(ConceptDbResponseId.Error, "Request could not be authorized.", new() { string.Empty });
+        
+        private static ConceptDbResponse DbConnected => new(ConceptDbResponseId.Information, "Database Connected", new() { string.Empty });
+        private static ConceptDbResponse DbNotConnected => new(ConceptDbResponseId.Information, "Database Not Reachable", new() { string.Empty });
         internal ConceptDbResponse RequestDbInitialize(string key)
         {
             if(key == _secKey)
@@ -39,14 +36,13 @@ namespace ConceptDbLib.Services
         {
             if(key == confirmKey)
             {
-                _db.Database.EnsureDeleted();
-                _db.Database.EnsureCreated();
-                return DbInitializeOk;
+                return _dbProvider.RemakeDb();
             }
             else
             {
                 return NotAuthorized;
             }
+
         }
         
         internal ConceptDbResponse CheckDbConnection(string key)
