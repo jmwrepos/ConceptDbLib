@@ -14,6 +14,63 @@ namespace ConceptDbLib.Services
         }
 
         //OBJECT CRUD
+        internal ConceptDbResponse RemoveObjectFromLibrary(string libName, string objName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            DbSearchResult objSearch = SearchObject(libName, objName);
+            if (objSearch.Found)
+            {
+                CptObject obj = objSearch.Objects[0];
+                CptLibrary lib = libSearch.Libraries[0];
+                lib.Objects.Remove(obj);
+                _db.SaveChanges();
+                return StaticMessages.ObjectRemovedFromLibrary(libName, objName);
+            }
+            else
+            {
+                return objSearch.ResultId switch
+                {
+                    ResultId.Unspecified => throw new InvalidOperationException("Result not populated."),
+                    ResultId.Success => throw new InvalidOperationException("Unexpected operation."),
+                    ResultId.LibNotFound => StaticMessages.LibraryNotFound(libName),
+                    ResultId.ObjNotInLib => StaticMessages.ObjectNotFound(libName, objName),
+                    _ => throw new InvalidOperationException("Invalid Value in Switch Case."),
+                };
+            }
+        }
+        internal ConceptDbResponse SeverParentChildObjectRelationship(string libName, string childName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                DbSearchResult childSearch = SearchObject(libName, childName);
+                if (childSearch.Found)
+                {
+                    CptObject child = childSearch.Objects[0];
+                    CptObject? parent = childSearch.Objects[0].Parent;
+                    if(parent != null)
+                    {
+                        string pName = parent.Name;
+                        child.Parent = null;
+                        _db.SaveChanges();
+                        return StaticMessages.ParentChildObjectRelationshipSevered(libName, pName, childName);
+
+                    }
+                    else
+                    {
+                        return StaticMessages.ObjectHasNoParent(libName, childName);
+                    }
+                }
+                else
+                {
+                    return StaticMessages.ObjectNotFound(libName, childName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
         internal ConceptDbResponse NewParentChildObjRelationship(string libName, string parentName, string childName)
         {
             DbSearchResult libSearch = SearchLibrary(libName);

@@ -27,14 +27,27 @@ namespace ConceptDbLib.Services
                 "Libraries Listed: [name1, name2, etc]",
                 new());
 
+        internal static ConceptDbResponse ObjectRemovedFromLibrary(string libName, string objName) =>
+            new (ConceptDbResponseId.Success,
+                "Object removed from library: [library, object]",
+                new() { libName, objName });
+
         internal static ConceptDbResponse ObjectRenamed(string libName, string oldName, string newName) =>
             new(ConceptDbResponseId.Success,
                 "Object Renamed : [in library, oldName, newName]",
                 new() { libName, oldName, newName });
 
-        internal static ConceptDbResponse ObjectNotFound(string libName, string oldName) =>
+        internal static ConceptDbResponse ParentChildObjectRelationshipSevered(string libName, string pName, string childName) =>
+            new(ConceptDbResponseId.Success, "Object Parent Child Relationship Severed: [library, parent object, child object]",
+                new() { libName, pName, childName });
+
+        internal static ConceptDbResponse ObjectNotFound(string libName, string objName) =>
             new(ConceptDbResponseId.Error, "Object Not Found: [in library, object name]",
-                new() { libName, oldName });
+                new() { libName, objName });
+
+        internal static ConceptDbResponse ObjectHasNoParent(string libName, string childName) =>
+            new(ConceptDbResponseId.Error, "Object Has No Parent: [library, object]",
+                new() { libName, childName });
 
         internal static ConceptDbResponse ParentChildObjRelationshipAdded(string libName, string parentName, string childName) =>
             new(ConceptDbResponseId.Success, "Parent Child Object Relationship Added [in library, parent object, child object]",

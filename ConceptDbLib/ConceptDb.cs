@@ -25,6 +25,32 @@ namespace ConceptDbLib
         // BUILDER METHODS //
         // BUILDER METHODS //
         // BUILDER METHODS //
+        public async Task<ConceptDbResponse> RemoveObjectFromLibraryAsync(string builderId, string libName, string objName) =>
+            await Task.Run(() => RemoveObjectFromLibrary(builderId, libName, objName));
+        public ConceptDbResponse RemoveObjectFromLibrary(string builderId, string libName, string objName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].RemoveObjectFromLibrary(libName, objName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
+        public async Task<ConceptDbResponse> SeverParentChildObjRelationshipAsync(string builderId, string libName, string childName) =>
+            await Task.Run(() => SeverParentChildObjRelationship(builderId, libName, childName));
+        public ConceptDbResponse SeverParentChildObjRelationship(string builderId, string libName, string childName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].SeverParentChildObjectRelationship(libName, childName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
         public async Task<ConceptDbResponse> NewParentChildObjRelationshipAsync(string builderId, string libName, string parentName, string childName) =>
             await Task.Run(() => NewParentChildObjRelationship(builderId, libName, parentName, childName));
         public ConceptDbResponse NewParentChildObjRelationship(string builderId, string libName, string parentName, string childName)
