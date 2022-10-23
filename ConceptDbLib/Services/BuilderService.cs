@@ -84,7 +84,7 @@ namespace ConceptDbLib.Services
                     {
                         CptObject parent = parentObjSearch.Objects[0];
                         CptObject child = childObjSearch.Objects[0];
-                        parent.Children.Add(child);
+                        child.Parent = parent;
                         _db.SaveChanges();
                         return StaticMessages.ParentChildObjRelationshipAdded(libName, parentName, childName);
                     }
@@ -127,8 +127,9 @@ namespace ConceptDbLib.Services
             }
 
         }
-        internal ConceptDbResponse NewObject(string libName, string objName)
+        internal ConceptDbResponse NewObject(string libName, string objName, string parentObjName, string objTypes)
         {
+            List<string> objTypeNames = objTypes == string.Empty ? new() { "root" } : objTypes.Split("_").ToList();
             DbSearchResult objSearch = SearchObject(libName,objName);
             if (objSearch.Found)
             {
@@ -144,6 +145,30 @@ namespace ConceptDbLib.Services
                         Name = objName
                     };
                     libSearch.Libraries[0].Objects.Add(newObj);
+                    if(parentObjName != string.Empty)
+                    {
+                        DbSearchResult parentObjSearch = SearchObject(libName, parentObjName);
+                        if (parentObjSearch.Found)
+                        {
+                            newObj.Parent = parentObjSearch.Objects[0];
+                        }
+                        else
+                        {
+                            return StaticMessages.ObjectNotFound(libName, parentObjName);
+                        }
+                    }
+                    foreach(string objTypeName in objTypeNames)
+                    {
+                        DbSearchResult objTypeSearch = SearchObjType(libSearch.Libraries[0], objTypeName);
+                        if (objTypeSearch.Found)
+                        {
+                            newObj.ObjectTypes.Add(objTypeSearch.ObjectTypes[0]);
+                        }
+                        else
+                        {
+                            return StaticMessages.ObjectTypeNotFound(libName, objTypeName);
+                        }
+                    }
                     _db.SaveChanges();
                     return StaticMessages.ObjectCreated(newObj.Id, newObj.Name);
                 }
@@ -178,6 +203,76 @@ namespace ConceptDbLib.Services
         }
 
         //LIBRARY CRUD
+        internal ConceptDbResponse RenameObjectType(string libName, string oldName, string newName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult existingType = SearchObjType(lib, newName);
+                if (!existingType.Found)
+                {
+                    DbSearchResult editedTypeSearch = SearchObjType(lib, oldName);
+                    if (editedTypeSearch.Found)
+                    {
+                        CptObjectType objType = editedTypeSearch.ObjectTypes[0];
+                        objType.Name = newName;
+                        _db.SaveChanges();
+                        return StaticMessages.ObjectTypeNameChanged(libName, oldName, newName);
+
+                    }
+                    else
+                    {
+                        return StaticMessages.ObjectNotFound(libName, oldName);
+                    }
+                }
+                else
+                {
+                    return StaticMessages.ObjectTypeNameUnavailable(libName, newName);
+                }
+
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+        internal ConceptDbResponse AddObjTypeToLibrary(string libName, string parentType, string newType)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult existingType = SearchObjType(lib, newType);
+                if (!existingType.Found)
+                {
+                    parentType = parentType == String.Empty ? "root" : parentType;
+                    DbSearchResult parentObjTypeSearch = SearchObjType(lib, parentType);
+                    if (parentObjTypeSearch.Found)
+                    {
+                        CptObjectType objType = new(newType);
+                        lib.ObjectTypes.Add(objType);
+                        parentObjTypeSearch.ObjectTypes[0].Children.Add(objType);
+                        _db.SaveChanges();
+                        return StaticMessages.ObjectTypeAddedToLibrary(libName, parentType, newType);
+                    }
+                    else
+                    {
+                        return StaticMessages.ObjectTypeNotFound(libName, parentType);
+                    }
+                }
+                else
+                {
+                    return StaticMessages.ObjectTypeNameUnavailable(libName, newType);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+
+
         internal ConceptDbResponse DeleteLibrary(string libName)
         {
             DbSearchResult search = SearchLibrary(libName);
@@ -261,8 +356,19 @@ namespace ConceptDbLib.Services
         {
             CptLibrary? result = RetrieveLibrary(name);
             return result == null 
-                ? new(false, ResultId.LibNotFound) 
-                : new(true, ResultId.Success, new() { result }, new());            
+                ? DbSearchResult.LibNotFound 
+                : new(true, ResultId.Success, new() { result }, new());
+        }
+        private DbSearchResult SearchObjType(CptLibrary lib, string name)
+        {
+            foreach(CptObjectType objType in lib.ObjectTypes)
+            {
+                if(objType.Name == name)
+                {
+                    return new(true, ResultId.Success, new() { objType });
+                }
+            }
+            return DbSearchResult.ObjTypeNotFound;
         }
     }
 }

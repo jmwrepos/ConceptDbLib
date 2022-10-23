@@ -33,14 +33,6 @@ namespace ConceptDbLib
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            //E -|-----|- E
-            //E -|-----||- E
-            //E -||-----||- E
-            /*    //LIBRARY -|-----||- OBJECT
-                modelBuilder.Entity<Type>()
-                    .HasMany(e => e.Collection)
-                    .WithMany(e => e.Collection);*/
-
 
             modelBuilder.Entity<CptLibrary>()
                 .HasMany(e => e.Objects)
@@ -53,6 +45,22 @@ namespace ConceptDbLib
                 .WithMany(e => e.Children)
                 .HasForeignKey(e => e.ParentId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+
+            modelBuilder.Entity<CptLibrary>()
+                .HasMany(e => e.ObjectTypes)
+                .WithOne(e => e.ParentLibrary)
+                .HasForeignKey(e => e.ParentLibraryId)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            modelBuilder.Entity<CptObjectType>()
+                .HasOne(e => e.ParentType)
+                .WithMany(e => e.Children)
+                .HasForeignKey(e => e.ParentId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            modelBuilder.Entity<CptObjectType>()
+                .HasMany(e => e.Objects)
+                .WithMany(e => e.ObjectTypes);
         }
     }
 }

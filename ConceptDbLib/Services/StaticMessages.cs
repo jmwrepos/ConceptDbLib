@@ -76,11 +76,38 @@ namespace ConceptDbLib.Services
         internal static ConceptDbResponse LibraryScopeRetrieved(string name, LibraryScope scoped) =>
             new(ConceptDbResponseId.Success,
                 "Library Scope Retrieved [name, serialized scope]",
-                new() { name, JsonConvert.SerializeObject(scoped, Formatting.Indented) });
+                new() { 
+                    name,
+                    JsonConvert.SerializeObject(scoped, Formatting.Indented,
+                    new JsonSerializerSettings()
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    })
+                });
 
         internal static ConceptDbResponse LibraryNotFound(string name) =>
             new(ConceptDbResponseId.Error,
                 "Library Not Found: [name]",
                 new() { name });
+
+        internal static ConceptDbResponse ObjectTypeNotFound(string libName, string typeName) =>
+            new(ConceptDbResponseId.Error,
+                "Object Type Not Found: [library, object type]",
+                new() { libName, typeName });
+
+        internal static ConceptDbResponse ObjectTypeNameUnavailable(string libName, string newType) =>
+            new(ConceptDbResponseId.Error,
+                "Object Type Already Exists: [library, object type]",
+                new() { libName, newType });
+
+        internal static ConceptDbResponse ObjectTypeAddedToLibrary(string libName, string parentType, string newType) =>
+            new(ConceptDbResponseId.Success,
+                "Object Type Created : [library, parentType, newType]",
+                new () { libName, parentType, newType});
+
+        internal static ConceptDbResponse ObjectTypeNameChanged(string libName, string oldName, string newName) =>
+            new(ConceptDbResponseId.Success,
+                "Object Type Name Changed : [library, oldName, newName]",
+                new() { libName, oldName, newName });
     }
 }
