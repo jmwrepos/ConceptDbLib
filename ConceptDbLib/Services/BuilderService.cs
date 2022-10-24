@@ -71,7 +71,7 @@ namespace ConceptDbLib.Services
                 return StaticMessages.LibraryNotFound(libName);
             }
         }
-        internal ConceptDbResponse NewParentChildObjRelationship(string libName, string parentName, string childName)
+        internal ConceptDbResponse MoveObject(string libName, string parentName, string childName)
         {
             DbSearchResult libSearch = SearchLibrary(libName);
             if (libSearch.Found)
@@ -202,7 +202,64 @@ namespace ConceptDbLib.Services
             }
         }
 
-        //LIBRARY CRUD
+        //OBJECT-TYPE CRUD
+        internal ConceptDbResponse MoveObjectType(string libName, string objType, string newParent)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult objTypeSearch = SearchObjType(lib, objType);
+                if (objTypeSearch.Found)
+                {
+                    DbSearchResult newParentSearch = SearchObjType(lib, newParent);
+                    if (newParentSearch.Found)
+                    {
+                        CptObjectType parent = newParentSearch.ObjectTypes[0];
+                        CptObjectType child = objTypeSearch.ObjectTypes[0];
+                        child.ParentType = parent;
+                        _db.SaveChanges();
+                        return StaticMessages.ObjectTypeMoved(libName, objType, newParent);
+                    }
+                    else
+                    {
+                        return StaticMessages.ObjectTypeNotFound(libName, newParent);
+                    }
+                }
+                else
+                {
+                    return StaticMessages.ObjectTypeNotFound(libName, objType);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+        internal ConceptDbResponse DeleteObjectType(string libName, string objTypeName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult objTypeSearch = SearchObjType(lib, objTypeName);
+                if (objTypeSearch.Found)
+                {
+                    CptObjectType objType = objTypeSearch.ObjectTypes[0];
+                    lib.ObjectTypes.Remove(objType);
+                    _db.SaveChanges();
+                    return StaticMessages.ObjectTypeDeleted(libName, objTypeName);
+                }
+                else
+                {
+                    return StaticMessages.ObjectTypeNotFound(libName, objTypeName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
         internal ConceptDbResponse RenameObjectType(string libName, string oldName, string newName)
         {
             DbSearchResult libSearch = SearchLibrary(libName);
@@ -223,7 +280,7 @@ namespace ConceptDbLib.Services
                     }
                     else
                     {
-                        return StaticMessages.ObjectNotFound(libName, oldName);
+                        return StaticMessages.ObjectTypeNotFound(libName, oldName);
                     }
                 }
                 else
@@ -272,6 +329,7 @@ namespace ConceptDbLib.Services
             }
         }
 
+        //LIBRARY CRUD
 
         internal ConceptDbResponse DeleteLibrary(string libName)
         {
@@ -359,7 +417,7 @@ namespace ConceptDbLib.Services
                 ? DbSearchResult.LibNotFound 
                 : new(true, ResultId.Success, new() { result }, new());
         }
-        private DbSearchResult SearchObjType(CptLibrary lib, string name)
+        private static DbSearchResult SearchObjType(CptLibrary lib, string name)
         {
             foreach(CptObjectType objType in lib.ObjectTypes)
             {

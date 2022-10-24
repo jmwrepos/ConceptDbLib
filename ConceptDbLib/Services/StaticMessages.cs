@@ -109,5 +109,15 @@ namespace ConceptDbLib.Services
             new(ConceptDbResponseId.Success,
                 "Object Type Name Changed : [library, oldName, newName]",
                 new() { libName, oldName, newName });
+
+        internal static ConceptDbResponse ObjectTypeDeleted(string libName, string objTypeName) =>
+            new (ConceptDbResponseId.Success,
+                "Object Type Deleted : [library, objectType]",
+                new () { libName, objTypeName });
+
+        internal static ConceptDbResponse ObjectTypeMoved(string libName, string objType, string newParent) =>
+            new(ConceptDbResponseId.Success,
+                "Object Type Moved : [library, objectType, newParent]",
+                new() { libName, objType, newParent });
     }
 }
