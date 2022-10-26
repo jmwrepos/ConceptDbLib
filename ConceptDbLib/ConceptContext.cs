@@ -61,6 +61,22 @@ namespace ConceptDbLib
             modelBuilder.Entity<CptObjectType>()
                 .HasMany(e => e.Objects)
                 .WithMany(e => e.ObjectTypes);
+
+            modelBuilder.Entity<CptLibrary>()
+                .HasMany(e => e.Properties)
+                .WithOne(e => e.Library)
+                .HasForeignKey(e => e.LibraryId)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            modelBuilder.Entity<CptObject>()
+                .HasMany(e => e.ObjectProperties)
+                .WithOne(e => e.Object)
+                .HasForeignKey(e => e.ObjectId);
+
+            modelBuilder.Entity<CptProperty>()
+                .HasMany(e => e.ObjectProperties)
+                .WithOne(e => e.Property)
+                .HasForeignKey(e => e.PropertyId);
         }
     }
 }

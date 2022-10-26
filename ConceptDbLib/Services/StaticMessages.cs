@@ -26,8 +26,47 @@ namespace ConceptDbLib.Services
             new(ConceptDbResponseId.Success,
                 "Libraries Listed: [name1, name2, etc]",
                 new());
+        internal static ConceptDbResponse PropertyNameUnavailable(string libName, string propName) =>
+            new(ConceptDbResponseId.Error,
+                "Property name not available: [library, property]",
+                new() { libName, propName });
 
-        internal static ConceptDbResponse ObjectRemovedFromLibrary(string libName, string objName) =>
+        internal static ConceptDbResponse PropertyDeleted(string libName, string propName) =>
+            new(ConceptDbResponseId.Success,
+                "Property deleted : [library, property]",
+                new() { libName, propName });
+
+        internal static ConceptDbResponse PropertyAlreadyAssigned(string libName, string propName, string objName) =>
+            new(ConceptDbResponseId.Error,
+                "Property Already Assigned: [library, propName, objName]",
+                new() { libName, propName, objName });
+
+        internal static ConceptDbResponse PropertyUnassigned(string libName, string propName, string objName) =>
+            new(ConceptDbResponseId.Success,
+                "Property Unassigned: [library, propName, objName]",
+                new() { libName, propName, objName });
+
+        internal static ConceptDbResponse PropertyNameChanged(string libName, string oldName, string newName) =>
+            new(ConceptDbResponseId.Success,
+                "Property name changed: [library, oldName, newName]",
+                new() { libName, oldName, newName });
+
+        internal static ConceptDbResponse PropertyAssigned(string libName, string propName, string objName) =>
+            new(ConceptDbResponseId.Success,
+                "Property Assigned: [library, propName, objName]",
+                new() { libName, propName, objName });
+
+        internal static ConceptDbResponse PropertyCreated(string libName, string propName) =>
+            new(ConceptDbResponseId.Success,
+                "Property created: [library, property]",
+                new() { libName, propName });
+
+        internal static ConceptDbResponse PropertyNotFound(string libName, string propName) =>
+            new(ConceptDbResponseId.Error,
+                "Property not found: [library, property]",
+                new() { libName, propName });
+
+        internal static ConceptDbResponse ObjectDeleted(string libName, string objName) =>
             new (ConceptDbResponseId.Success,
                 "Object removed from library: [library, object]",
                 new() { libName, objName });

@@ -25,6 +25,71 @@ namespace ConceptDbLib
         // BUILDER METHODS //
         // BUILDER METHODS //
         // BUILDER METHODS //
+        public async Task<ConceptDbResponse> UnassignPropertyAsync(string builderId, string libName, string propName, string objName) =>
+            await Task.Run(() => UnassignProperty(builderId, libName, propName, objName));
+        public ConceptDbResponse UnassignProperty(string builderId, string libName, string propName, string objName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].UnassignProperty(libName, propName, objName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
+        public async Task<ConceptDbResponse> AssignPropertyAsync(string builderId, string libName, string propName, string objName) =>
+            await Task.Run(() => AssignProperty(builderId, libName, propName, objName));        
+        public ConceptDbResponse AssignProperty(string builderId, string libName, string propName, string objName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].AssignProperty(libName, propName, objName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
+        public async Task<ConceptDbResponse> DeletePropertyAsync(string builderId, string libName, string propName) =>
+            await Task.Run(() => DeleteProperty(builderId, libName, propName));
+        public ConceptDbResponse DeleteProperty(string builderId, string libName, string propName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].DeleteProperty(libName, propName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
+        public async Task<ConceptDbResponse> RenamePropertyAsync(string builderId, string libName, string oldName, string newName) =>
+            await Task.Run(() => RenameProperty(builderId, libName, oldName, newName));
+        public ConceptDbResponse RenameProperty(string builderId, string libName, string oldName, string newName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].RenameProperty(libName, oldName, newName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
+        public async Task<ConceptDbResponse> NewPropertyAsync(string builderId, string libName, string propName) =>
+            await Task.Run(() => NewProperty(builderId, libName, propName));
+        public ConceptDbResponse NewProperty(string builderId, string libName, string propName)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].NewProperty(libName, propName);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
         public async Task<ConceptDbResponse> MoveObjectTypeAsync(string builderId, string libName, string objTypeName, string newParentName) =>
             await Task.Run(() => MoveObjectType(builderId, libName, objTypeName, newParentName));
         public ConceptDbResponse MoveObjectType(string builderId, string libName, string objTypeName, string newParentName)
@@ -64,48 +129,35 @@ namespace ConceptDbLib
                 return BuilderNotFound(builderId);
             }
         }
-        public async Task<ConceptDbResponse> AddObjectTypeToLibraryAsync(string builderId, string libName, string parentType, string newType) =>
-            await Task.Run(() => AddObjectTypeToLibrary(builderId, libName, parentType, newType));
-        public ConceptDbResponse AddObjectTypeToLibrary(string builderId, string libName, string parentType, string newType)
+        public async Task<ConceptDbResponse> NewObjectTypeAsync(string builderId, string libName, string parentType, string newType) =>
+            await Task.Run(() => NewObjectType(builderId, libName, parentType, newType));
+        public ConceptDbResponse NewObjectType(string builderId, string libName, string parentType, string newType)
         {
             if (_builders.ContainsKey(builderId))
             {
-                return _builders[builderId].AddObjTypeToLibrary(libName, parentType, newType);
+                return _builders[builderId].NewObjectType(libName, parentType, newType);
             }
             else
             {
                 return BuilderNotFound(builderId);
             }
         }
-        public async Task<ConceptDbResponse> RemoveObjectFromLibraryAsync(string builderId, string libName, string objName) =>
-            await Task.Run(() => RemoveObjectFromLibrary(builderId, libName, objName));
-        public ConceptDbResponse RemoveObjectFromLibrary(string builderId, string libName, string objName)
+        public async Task<ConceptDbResponse> DeleteObjectAsync(string builderId, string libName, string objName) =>
+            await Task.Run(() => DeleteObject(builderId, libName, objName));
+        public ConceptDbResponse DeleteObject(string builderId, string libName, string objName)
         {
             if (_builders.ContainsKey(builderId))
             {
-                return _builders[builderId].RemoveObjectFromLibrary(libName, objName);
+                return _builders[builderId].DeleteObject(libName, objName);
             }
             else
             {
                 return BuilderNotFound(builderId);
             }
         }
-        public async Task<ConceptDbResponse> SeverParentChildObjRelationshipAsync(string builderId, string libName, string childName) =>
-            await Task.Run(() => SeverParentChildObjRelationship(builderId, libName, childName));
-        public ConceptDbResponse SeverParentChildObjRelationship(string builderId, string libName, string childName)
-        {
-            if (_builders.ContainsKey(builderId))
-            {
-                return _builders[builderId].SeverParentChildObjectRelationship(libName, childName);
-            }
-            else
-            {
-                return BuilderNotFound(builderId);
-            }
-        }
-        public async Task<ConceptDbResponse> MoveObjectAsync(string builderId, string libName, string parentName, string childName) =>
-            await Task.Run((Func<ConceptDbResponse>)(() => (ConceptDbResponse)this.MoveObject(builderId, libName, parentName, childName)));
-        public ConceptDbResponse MoveObject(string builderId, string libName, string parentName, string childName)
+        public async Task<ConceptDbResponse> MoveObjectAsync(string builderId, string libName, string? parentName, string childName) =>
+            await Task.Run(() => MoveObject(builderId, libName, parentName, childName));
+        public ConceptDbResponse MoveObject(string builderId, string libName, string? parentName, string childName)
         {
             if (_builders.ContainsKey(builderId))
             {

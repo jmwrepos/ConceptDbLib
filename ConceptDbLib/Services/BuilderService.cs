@@ -12,19 +12,200 @@ namespace ConceptDbLib.Services
         {
             _dbProvider = dbProvider;
         }
-
-        //OBJECT CRUD
-        internal ConceptDbResponse RemoveObjectFromLibrary(string libName, string objName)
+        //PROPERTY CRUD
+        internal ConceptDbResponse UnassignProperty(string libName, string propName, string objName)
         {
             DbSearchResult libSearch = SearchLibrary(libName);
-            DbSearchResult objSearch = SearchObject(libName, objName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult propSearch = SearchProperty(lib, propName);
+                if (propSearch.Found)
+                {
+                    DbSearchResult objSearch = SearchObject(lib, objName);
+                    if (objSearch.Found)
+                    {
+                        CptObject obj = objSearch.Objects[0];
+                        CptProperty prop = propSearch.Properties[0];
+                        for(int i = 0; i < obj.ObjectProperties.Count; i++)
+                        {
+                            CptObjectProperty objProp = obj.ObjectProperties[i];
+                            if (objProp.Property == prop)
+                            {
+                                obj.ObjectProperties.Remove(objProp);
+                                prop.ObjectProperties.Remove(objProp);
+                            }
+
+                        }
+                        _db.SaveChanges();
+                        return StaticMessages.PropertyUnassigned(libName, propName, objName);
+                    }
+                    else
+                    {
+                        return StaticMessages.ObjectNotFound(libName, objName);
+                    }
+                }
+                else
+                {
+                    return StaticMessages.PropertyNotFound(libName, propName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+
+        }
+        internal ConceptDbResponse AssignProperty(string libName, string propName, string objName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult propSearch = SearchProperty(lib, propName);
+                if (propSearch.Found)
+                {
+                    DbSearchResult objSearch = SearchObject(lib, objName);
+                    if (objSearch.Found)
+                    {
+                        CptObject obj = objSearch.Objects[0];
+                        CptProperty prop = propSearch.Properties[0];
+                        foreach(CptObjectProperty objProp in obj.ObjectProperties)
+                        {
+                            if(objProp.Property == prop)
+                            {
+                                return StaticMessages.PropertyAlreadyAssigned(libName, propName, objName);
+                            }
+                        }
+                        CptObjectProperty newObjProp = new();
+                        obj.ObjectProperties.Add(newObjProp);
+                        prop.ObjectProperties.Add(newObjProp);
+                        _db.SaveChanges();
+                        return StaticMessages.PropertyAssigned(libName, propName, objName);
+                    }
+                    else
+                    {
+                        return StaticMessages.ObjectNotFound(libName, objName);
+                    }
+                }
+                else
+                {
+                    return StaticMessages.PropertyNotFound(libName, propName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+        internal ConceptDbResponse DeleteProperty(string libName, string propName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult propSearch = SearchProperty(lib, propName);
+                if (propSearch.Found)
+                {
+                    CptProperty prop = propSearch.Properties[0];
+                    lib.Properties.Remove(prop);
+                    _db.SaveChanges();
+                    return StaticMessages.PropertyDeleted(libName, propName);
+                }
+                else
+                {
+                    return StaticMessages.PropertyNotFound(libName, propName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+        internal ConceptDbResponse RenameProperty(string libName, string oldName, string newName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult propSearch = SearchProperty(lib, oldName);
+                if (propSearch.Found)
+                {
+                    DbSearchResult existing = SearchProperty(lib, newName);
+                    if (!existing.Found)
+                    {
+                        CptProperty prop = propSearch.Properties[0];
+                        prop.Name = newName;
+                        _db.SaveChanges();
+                        return StaticMessages.PropertyNameChanged(libName, oldName, newName);
+                    }
+                    else
+                    {
+                        return StaticMessages.PropertyNameUnavailable(libName, newName);
+                    }                    
+                }
+                else
+                {
+                    return StaticMessages.PropertyNotFound(libName, oldName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+        internal ConceptDbResponse NewProperty(string libName, string propName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult propSearch = SearchProperty(lib, propName);
+                if (propSearch.Found)
+                {
+                    return StaticMessages.PropertyNameUnavailable(libName, propName);
+                }
+                else
+                {
+                    CptProperty newProp = new()
+                    {
+                        Name = propName
+                    };
+                    lib.Properties.Add(newProp);
+                    _db.SaveChanges();
+                    return StaticMessages.PropertyCreated(libName, propName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+
+        private static DbSearchResult SearchProperty(CptLibrary lib, string propName)
+        {
+            foreach(CptProperty property in lib.Properties)
+            {
+                if(property.Name == propName)
+                {
+                    return DbSearchResult.PropFound(property);
+                }
+            }
+            return DbSearchResult.PropNotFound;
+        }
+
+        //OBJECT CRUD
+        internal ConceptDbResponse DeleteObject(string libName, string objName)
+        {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            DbSearchResult objSearch = SearchObject(libSearch.Libraries[0], objName);
             if (objSearch.Found)
             {
                 CptObject obj = objSearch.Objects[0];
                 CptLibrary lib = libSearch.Libraries[0];
                 lib.Objects.Remove(obj);
                 _db.SaveChanges();
-                return StaticMessages.ObjectRemovedFromLibrary(libName, objName);
+                return StaticMessages.ObjectDeleted(libName, objName);
             }
             else
             {
@@ -38,27 +219,46 @@ namespace ConceptDbLib.Services
                 };
             }
         }
-        internal ConceptDbResponse SeverParentChildObjectRelationship(string libName, string childName)
+        internal ConceptDbResponse MoveObject(string libName, string? parentName, string childName)
         {
             DbSearchResult libSearch = SearchLibrary(libName);
             if (libSearch.Found)
             {
-                DbSearchResult childSearch = SearchObject(libName, childName);
-                if (childSearch.Found)
+                DbSearchResult childObjSearch = SearchObject(libSearch.Libraries[0], childName);
+                if (childObjSearch.Found)
                 {
-                    CptObject child = childSearch.Objects[0];
-                    CptObject? parent = childSearch.Objects[0].Parent;
-                    if(parent != null)
+                    if (parentName != null && parentName != string.Empty)
                     {
-                        string pName = parent.Name;
-                        child.Parent = null;
-                        _db.SaveChanges();
-                        return StaticMessages.ParentChildObjectRelationshipSevered(libName, pName, childName);
-
+                        DbSearchResult parentObjSearch = SearchObject(libSearch.Libraries[0], parentName);
+                        if (parentObjSearch.Found)
+                        {
+                            CptObject parent = parentObjSearch.Objects[0];
+                            CptObject child = childObjSearch.Objects[0];
+                            child.Parent = parent;
+                            _db.SaveChanges();
+                            return StaticMessages.ParentChildObjRelationshipAdded(libName, parentName, childName);
+                        }
+                        else
+                        {
+                            return StaticMessages.ObjectNotFound(libName, parentName);
+                        }
                     }
                     else
                     {
-                        return StaticMessages.ObjectHasNoParent(libName, childName);
+                        CptObject child = childObjSearch.Objects[0];
+                        CptObject? parent = childObjSearch.Objects[0].Parent;
+                        if (parent != null)
+                        {
+                            string pName = parent.Name;
+                            child.Parent = null;
+                            _db.SaveChanges();
+                            return StaticMessages.ParentChildObjectRelationshipSevered(libName, pName, childName);
+
+                        }
+                        else
+                        {
+                            return StaticMessages.ObjectHasNoParent(libName, childName);
+                        }
                     }
                 }
                 else
@@ -71,44 +271,12 @@ namespace ConceptDbLib.Services
                 return StaticMessages.LibraryNotFound(libName);
             }
         }
-        internal ConceptDbResponse MoveObject(string libName, string parentName, string childName)
-        {
-            DbSearchResult libSearch = SearchLibrary(libName);
-            if (libSearch.Found)
-            {
-                DbSearchResult parentObjSearch = SearchObject(libName, parentName);
-                DbSearchResult childObjSearch = SearchObject(libName, childName);
-                if (parentObjSearch.Found)
-                {
-                    if (childObjSearch.Found)
-                    {
-                        CptObject parent = parentObjSearch.Objects[0];
-                        CptObject child = childObjSearch.Objects[0];
-                        child.Parent = parent;
-                        _db.SaveChanges();
-                        return StaticMessages.ParentChildObjRelationshipAdded(libName, parentName, childName);
-                    }
-                    else
-                    {
-                        return StaticMessages.ObjectNotFound(libName, childName);
-                    }
-                }
-                else
-                {
-                    return StaticMessages.ObjectNotFound(libName, parentName);
-                }
-            }
-            else
-            {
-                return StaticMessages.LibraryNotFound(libName);
-            }
-        }
         internal ConceptDbResponse RenameObject(string libName, string oldName, string newName)
         {
             DbSearchResult libSearch = SearchLibrary(libName);
             if (libSearch.Found)
             {
-                DbSearchResult objSearch = SearchObject(libName, oldName);
+                DbSearchResult objSearch = SearchObject(libSearch.Libraries[0], oldName);
                 if (objSearch.Found)
                 {
                     CptObject obj = objSearch.Objects[0];
@@ -129,8 +297,21 @@ namespace ConceptDbLib.Services
         }
         internal ConceptDbResponse NewObject(string libName, string objName, string parentObjName, string objTypes)
         {
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                return NewObject(libSearch.Libraries[0], objName, parentObjName, objTypes);
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
+        }
+        internal ConceptDbResponse NewObject(CptLibrary lib, string objName, string parentObjName, string objTypes)
+        {
+            string libName = lib.Name;
             List<string> objTypeNames = objTypes == string.Empty ? new() { "root" } : objTypes.Split("_").ToList();
-            DbSearchResult objSearch = SearchObject(libName,objName);
+            DbSearchResult objSearch = SearchObject(lib, objName);
             if (objSearch.Found)
             {
                 return StaticMessages.ObjectNameUnavailable(objName);
@@ -147,7 +328,7 @@ namespace ConceptDbLib.Services
                     libSearch.Libraries[0].Objects.Add(newObj);
                     if(parentObjName != string.Empty)
                     {
-                        DbSearchResult parentObjSearch = SearchObject(libName, parentObjName);
+                        DbSearchResult parentObjSearch = SearchObject(libSearch.Libraries[0], parentObjName);
                         if (parentObjSearch.Found)
                         {
                             newObj.Parent = parentObjSearch.Objects[0];
@@ -181,24 +362,16 @@ namespace ConceptDbLib.Services
 
         private static CptObject? RetrieveObjectFromLibrary(CptLibrary library, string objName)
             => library.Objects.Where(o => o.Name == objName).FirstOrDefault();
-        private DbSearchResult SearchObject(string libName, string objName)
+        private DbSearchResult SearchObject(CptLibrary lib, string objectName)
         {
-            DbSearchResult libSearch = SearchLibrary(libName);
-            if (libSearch.Found)
+            CptObject? result = RetrieveObjectFromLibrary(lib, objectName);
+            if(result != null)
             {
-                CptObject? result = RetrieveObjectFromLibrary(libSearch.Libraries[0], objName);
-                if(result != null)
-                {
-                    return new(true, ResultId.Success, new(), new() { result });
-                }
-                else
-                {
-                    return DbSearchResult.ObjNotInLib;
-                }
+                return new(true, ResultId.Success, new(), new() { result });
             }
             else
             {
-                return DbSearchResult.LibNotFound;
+                return DbSearchResult.ObjNotInLib;
             }
         }
 
@@ -294,7 +467,7 @@ namespace ConceptDbLib.Services
                 return StaticMessages.LibraryNotFound(libName);
             }
         }
-        internal ConceptDbResponse AddObjTypeToLibrary(string libName, string parentType, string newType)
+        internal ConceptDbResponse NewObjectType(string libName, string parentType, string newType)
         {
             DbSearchResult libSearch = SearchLibrary(libName);
             if (libSearch.Found)
