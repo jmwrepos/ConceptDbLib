@@ -76,6 +76,11 @@ namespace ConceptDbLib.Services
                 "Object Renamed : [in library, oldName, newName]",
                 new() { libName, oldName, newName });
 
+        internal static ConceptDbResponse ObjPropValuesSet(string libName, string propName, string objName) =>
+            new(ConceptDbResponseId.Success,
+                "Object Property Values Set : [library, propName, objName] (request new scope for updated data)",
+                new() { libName, propName, objName });
+
         internal static ConceptDbResponse ParentChildObjectRelationshipSevered(string libName, string pName, string childName) =>
             new(ConceptDbResponseId.Success, "Object Parent Child Relationship Severed: [library, parent object, child object]",
                 new() { libName, pName, childName });

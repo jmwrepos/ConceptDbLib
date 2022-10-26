@@ -25,6 +25,20 @@ namespace ConceptDbLib
         // BUILDER METHODS //
         // BUILDER METHODS //
         // BUILDER METHODS //
+
+        public async Task<ConceptDbResponse> SetPropertyValueAsync(string builderId, string libName, string objName, string propName, string stringVals, string objNameVals, string numVals) =>
+            await Task.Run(() => SetPropertyValue(builderId, libName, objName, propName, stringVals, objNameVals, numVals));
+        public ConceptDbResponse SetPropertyValue(string builderId, string libName, string objName, string propName, string stringVals, string objNameVals, string numVals)
+        {
+            if (_builders.ContainsKey(builderId))
+            {
+                return _builders[builderId].SetPropertyValue(libName, objName, propName, stringVals, objNameVals, numVals);
+            }
+            else
+            {
+                return BuilderNotFound(builderId);
+            }
+        }
         public async Task<ConceptDbResponse> UnassignPropertyAsync(string builderId, string libName, string propName, string objName) =>
             await Task.Run(() => UnassignProperty(builderId, libName, propName, objName));
         public ConceptDbResponse UnassignProperty(string builderId, string libName, string propName, string objName)

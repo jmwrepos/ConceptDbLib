@@ -7,10 +7,73 @@ namespace ConceptDbLib.Services
     public class BuilderService
     {
         private readonly CptDbProvider _dbProvider;
-        private ConceptContext _db => _dbProvider.Context;       
+        private ConceptContext _db => _dbProvider.Context;
         public BuilderService(CptDbProvider dbProvider)
         {
             _dbProvider = dbProvider;
+        }
+
+        internal ConceptDbResponse SetPropertyValue(string libName, string objName, string propName, string stringVals, string objNameVals, string numVals)
+        {
+            List<string> sVals = stringVals.Split("_").ToList();
+            List<string> onVals = objNameVals.Split("_").ToList();
+            List<double> nVals = new();
+            foreach(string entry in numVals.Split("_"))
+            {
+                if(entry != string.Empty && entry != null)
+                {
+                    nVals.Add(double.Parse(entry));
+                }
+            }
+
+            DbSearchResult libSearch = SearchLibrary(libName);
+            if (libSearch.Found)
+            {
+                CptLibrary lib = libSearch.Libraries[0];
+                DbSearchResult objSearch = SearchObject(lib, objName);
+                if (objSearch.Found)
+                {
+                    CptObject obj = objSearch.Objects[0];
+                    foreach(CptObjectProperty objProp in obj.ObjectProperties)
+                    {
+                        if(objProp.Property.Name == propName)
+                        {
+                            objProp.StringValues.Clear();
+                            objProp.ObjNameValues.Clear();
+                            objProp.NumberValues.Clear();
+                            foreach (string entry in sVals)
+                            {
+                                if(entry.Length > 0 && entry != null)
+                                {
+                                    objProp.StringValues.Add(new(entry));
+                                }
+                            }
+                            foreach (string entry in onVals)
+                            {
+                                if (entry.Length > 0 && entry != null)
+                                {
+                                    objProp.ObjNameValues.Add(new(entry));
+                                }
+                            }
+                            foreach (double entry in nVals)
+                            {
+                                objProp.NumberValues.Add(new(entry));
+                            }
+                            _db.SaveChanges();
+                            return StaticMessages.ObjPropValuesSet(libName, propName, objName);
+                        }
+                    }
+                    return StaticMessages.PropertyNotFound(libName, propName);
+                }
+                else
+                {
+                    return StaticMessages.ObjectNotFound(libName, objName);
+                }
+            }
+            else
+            {
+                return StaticMessages.LibraryNotFound(libName);
+            }
         }
         //PROPERTY CRUD
         internal ConceptDbResponse UnassignProperty(string libName, string propName, string objName)

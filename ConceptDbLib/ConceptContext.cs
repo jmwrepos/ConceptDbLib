@@ -10,9 +10,9 @@ namespace ConceptDbLib
         public DbSet<CptProperty> Properties => Set<CptProperty>();
         public DbSet<CptObjectType> ObjectTypes => Set<CptObjectType>();
         public DbSet<CptObjectProperty> ObjectProperties => Set<CptObjectProperty>();
+        public DbSet<CptObjectNameValue> ObjNameValues => Set<CptObjectNameValue>();
         public DbSet<CptStringValue> StringValues => Set<CptStringValue>();
         public DbSet<CptNumberValue> NumberValues => Set<CptNumberValue>();
-        public DbSet<CptObjectValue> ObjectValues => Set<CptObjectValue>();
         //REMAINING CODE BELOW
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -77,6 +77,22 @@ namespace ConceptDbLib
                 .HasMany(e => e.ObjectProperties)
                 .WithOne(e => e.Property)
                 .HasForeignKey(e => e.PropertyId);
+
+            modelBuilder.Entity<CptObjectProperty>()
+                .HasMany(e => e.NumberValues)
+                .WithOne(e => e.Owner)
+                .HasForeignKey(e => e.OwnerId);
+
+            modelBuilder.Entity<CptObjectProperty>()
+                .HasMany(e => e.StringValues)
+                .WithOne(e => e.Owner)
+                .HasForeignKey(e => e.OwnerId);
+
+            modelBuilder.Entity<CptObjectProperty>()
+                .HasMany(e => e.ObjNameValues)
+                .WithOne(e => e.Owner)
+                .HasForeignKey(e => e.OwnerId);
+
         }
     }
 }
