@@ -36,6 +36,16 @@ namespace ConceptDbLib.Services
                 "Property deleted : [library, property]",
                 new() { libName, propName });
 
+        internal static ConceptDbResponse AccountScopeRetrieved(AccountScope accountScope) =>
+            new(ConceptDbResponseId.Success,
+                "Account Retrieved : [acct Name, scope]",
+                new() { accountScope.AccountName, JsonConvert.SerializeObject(accountScope, Formatting.Indented) });
+
+        internal static ConceptDbResponse UserNotFound(string email) =>
+            new(ConceptDbResponseId.Error,
+                "User Not Found: [email]",
+                new() { email });
+
         internal static ConceptDbResponse PropertyAlreadyAssigned(string libName, string propName, string objName) =>
             new(ConceptDbResponseId.Error,
                 "Property Already Assigned: [library, propName, objName]",
@@ -123,6 +133,19 @@ namespace ConceptDbLib.Services
                 new() { 
                     name,
                     JsonConvert.SerializeObject(scoped, Formatting.Indented,
+                    new JsonSerializerSettings()
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    })
+                });
+
+        internal static ConceptDbResponse UserScopeRetrieved(string email, UserScope scope) =>
+            new(ConceptDbResponseId.Success,
+                "User Scope Retreived [email, scope]",
+                new()
+                {
+                    email,
+                    JsonConvert.SerializeObject(scope, Formatting.Indented,
                     new JsonSerializerSettings()
                     {
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore

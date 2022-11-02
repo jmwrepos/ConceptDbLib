@@ -1,18 +1,252 @@
 ﻿using CptClientShared;
 using CptClientShared.Entities;
+using CptClientShared.Entities.Accounting;
 using CptClientShared.Scopes;
+using System.Net.Mail;
 
 namespace ConceptDbLib.Services
 {
     public class BuilderService
     {
-        private readonly CptDbProvider _dbProvider;
-        private ConceptContext _db => _dbProvider.Context;
-        public BuilderService(CptDbProvider dbProvider)
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        private readonly CptAcctUser _user;
+        private Action SaveDb;
+        private readonly ValidationService _validation;
+        public BuilderService(CptDbProvider dbProvider, CptAcctUser user)
         {
-            _dbProvider = dbProvider;
+            _user = user;
+            SaveDb = () => { dbProvider.Context.SaveChanges(); };
+            _validation = dbProvider.ValidationService;
         }
 
+        internal ConceptDbResponse DeleteUser(string email)
+        {
+            bool userExists = _user.Account.Users.Any(e => e.Email.ToLower() == email.ToLower());
+            if (userExists)
+            {
+                CptAcctUser targetUser = _user.Account.Users.Where(e => e.Email.ToLower() == email.ToLower()).First();
+                if(targetUser != _user)
+                {
+                    _user.Account.Users.Remove(targetUser);
+                    SaveDb();
+                    return new(ConceptDbResponseId.Success, "User Deleted [email]", new() { email });
+                }
+                else
+                {
+                    return new(ConceptDbResponseId.Error, "Cannot delete self.", new() { email });
+                }
+            }
+            else
+            {
+                return StaticMessages.UserNotFound(email);
+            }
+        }
+        internal ConceptDbResponse InactivateUser(string email)
+        {
+            bool userExists = _user.Account.Users.Any(e => e.Email.ToLower() == email.ToLower());
+            if (userExists)
+            {
+                CptAcctUser targetUser = _user.Account.Users.Where(e => e.Email.ToLower() == email.ToLower()).First();
+                foreach(CptAcctUser listedUser in _user.Account.Users)
+                {
+                    if(listedUser != targetUser && listedUser.Active)
+                    {
+                        targetUser.Active = false;
+                        SaveDb();
+                        return new(ConceptDbResponseId.Success, "User Inactivated [user]", new() { targetUser.Email });
+                    }
+                }
+                return new(ConceptDbResponseId.Error, "Cannot inactivate only active user.", new() { email });
+            }
+            else
+            {
+                return StaticMessages.UserNotFound(email);
+            }
+        }
+            internal ConceptDbResponse UpdateAccountName(string newName)
+        {
+            if (CptRegex.Name.IsMatch(newName))
+            {
+                _user.Account.AccountName = newName;
+                SaveDb();
+                return new(ConceptDbResponseId.Success, "Account Name Updated [new name]", new() { newName });
+            }
+            else
+            {
+                return new(ConceptDbResponseId.Error, "Account Name Invalid", new() { newName });
+            }
+        }
+        internal ConceptDbResponse RetrieveUserScope(string email)
+        {
+            bool userExists = _user.Account.Users.Any(e => e.Email.ToLower() == email.ToLower());
+            if (userExists)
+            {
+                string msg = string.Empty;
+                CptAcctUser user = _user.Account.Users.Where(e => e.Email.ToLower() == email.ToLower()).First();
+                UserScope scope = new(user);
+                return StaticMessages.UserScopeRetrieved(email, scope);
+            }
+            else
+            {
+                return StaticMessages.UserNotFound(email);
+            }
+        }
+
+        internal ConceptDbResponse RetrieveAccountScope()
+        {
+            return StaticMessages.AccountScopeRetrieved(new AccountScope(_user.Account));
+        }
+        internal ConceptDbResponse UpdateUser(string currentEmail, string? firstName, string? lastName, string? newEmail, string? password)
+        {
+            bool userExists = _user.Account.Users.Any(e => e.Email.ToLower() == currentEmail.ToLower());
+            if (userExists)
+            {
+                string msg = string.Empty;
+                CptAcctUser user = _user.Account.Users.Where(e => e.Email.ToLower() == currentEmail.ToLower()).First();
+                bool fnValid = true;
+                bool lnValid = true;
+                bool emailValid = true;
+                bool pwValid = true;
+                if (firstName != null)
+                {
+                    fnValid = CptRegex.Name.IsMatch(firstName);
+                    if (!fnValid)
+                    {
+                        msg += "First Name Invalid";
+                    }
+                }
+                if(lastName != null)
+                {
+                    lnValid = CptRegex.Name.IsMatch(lastName);
+                    if (!lnValid)
+                    {
+                        msg += ", Last Name Invalid";
+                    }
+                }
+                if(newEmail != null)
+                {
+                    bool dupe = !_validation.UsernameAvailable(newEmail);
+                    if (!dupe)
+                    {
+                        try
+                        {
+                            MailAddress emailObj = new(newEmail);
+                        }
+                        catch
+                        {
+                            emailValid = false;
+                        }
+                        if (!emailValid)
+                        {
+                            msg += ", Email Invalid";
+                        }
+                    }
+                    else
+                    {
+                        emailValid = false;
+                        msg += ", Email Duplicate";
+                    }
+                }
+                if(password != null)
+                {
+                    pwValid = CptRegex.Password.IsMatch(password);
+                    if (!pwValid)
+                    {
+                        msg += ", Password Too Weak or Invalid";
+                    }
+                }
+                if(fnValid && lnValid && emailValid && pwValid)
+                {
+                    if(firstName != null)
+                    {
+                        user.FirstName = firstName;
+                        msg += "User First Name Changed";
+                    }
+                    if(lastName != null)
+                    {
+                        user.LastName = lastName;
+                        msg += ", User Last Name Changed";
+                    }
+                    if(newEmail != null)
+                    {
+                        user.Email = newEmail;
+                        msg += ", User Email Changed";
+                    }
+                    if(password != null)
+                    {
+                        user.Password = ApiEncryption.Encrypt(user.Account.EncryptionKey, user.UserIV, password);
+                        msg += ", User Password Changed";
+                    }
+                    SaveDb();
+                    return new(ConceptDbResponseId.Success, msg, new() { firstName ?? String.Empty, lastName ?? String.Empty, newEmail ?? String.Empty, password ?? String.Empty });
+                }
+                else
+                {
+                    return new(ConceptDbResponseId.Error, msg, new() { currentEmail, firstName ?? String.Empty, lastName ?? String.Empty, newEmail ?? String.Empty, password ?? String.Empty });
+                }
+            }
+            else
+            {
+                return StaticMessages.UserNotFound(currentEmail);
+            }
+        }
+        internal ConceptDbResponse NewUser(string? firstName, string? lastName, string? email, string? password)
+        {
+            firstName ??= string.Empty;
+            lastName ??= string.Empty;
+            email ??= string.Empty;
+            password ??= string.Empty;
+            bool firstNameValid = CptRegex.Name.IsMatch(firstName);
+            bool lastNameValid = CptRegex.Name.IsMatch(lastName);
+            bool emailValid;
+            try
+            {
+                MailAddress emailObj = new(email);
+                emailValid = emailObj.Address == email;
+            }
+            catch
+            {
+                emailValid = false;
+            }            
+            bool passwordValid = CptRegex.Password.IsMatch(password);
+            if (!firstNameValid)
+            {
+                return new(ConceptDbResponseId.Error, "First Name Invalid", new() { firstName });
+            }
+            if (!lastNameValid)
+            {
+                return new(ConceptDbResponseId.Error, "Last Name Invalid", new() { lastName });
+            }
+            if (!emailValid)
+            {
+                return new(ConceptDbResponseId.Error, "Email/Username Invalid", new() { email });
+            }
+            if (!passwordValid)
+            {
+                return new(ConceptDbResponseId.Error, "Password Too Weak or Invalid", new() { password });
+            }
+            bool usernameAvail = _validation.UsernameAvailable(email);
+            if (usernameAvail)
+            {
+                CptAccount acct = _user.Account;
+                CptAcctUser newUser = new()
+                {
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Email = email.ToLower(),
+                    UserIV = ApiEncryption.NewIV(),
+                    Active = true
+                };
+                newUser.Password = ApiEncryption.Encrypt(acct.EncryptionKey, newUser.UserIV, password);
+                acct.Users.Add(newUser);
+                SaveDb();
+                return new(ConceptDbResponseId.Success, "User Added: [Email/Username]", new() { email });
+            }
+            else
+            {
+                return new(ConceptDbResponseId.Error, "Username Not Available: [email]", new() { email });
+            }
+        }
         internal ConceptDbResponse SetPropertyValue(string libName, string objName, string propName, string stringVals, string objNameVals, string numVals)
         {
             List<string> sVals = stringVals.Split("_").ToList();
@@ -59,7 +293,7 @@ namespace ConceptDbLib.Services
                             {
                                 objProp.NumberValues.Add(new(entry));
                             }
-                            _db.SaveChanges();
+                            SaveDb();
                             return StaticMessages.ObjPropValuesSet(libName, propName, objName);
                         }
                     }
@@ -100,7 +334,7 @@ namespace ConceptDbLib.Services
                             }
 
                         }
-                        _db.SaveChanges();
+                        SaveDb();
                         return StaticMessages.PropertyUnassigned(libName, propName, objName);
                     }
                     else
@@ -143,7 +377,7 @@ namespace ConceptDbLib.Services
                         CptObjectProperty newObjProp = new();
                         obj.ObjectProperties.Add(newObjProp);
                         prop.ObjectProperties.Add(newObjProp);
-                        _db.SaveChanges();
+                        SaveDb();
                         return StaticMessages.PropertyAssigned(libName, propName, objName);
                     }
                     else
@@ -172,7 +406,7 @@ namespace ConceptDbLib.Services
                 {
                     CptProperty prop = propSearch.Properties[0];
                     lib.Properties.Remove(prop);
-                    _db.SaveChanges();
+                    SaveDb();
                     return StaticMessages.PropertyDeleted(libName, propName);
                 }
                 else
@@ -199,7 +433,7 @@ namespace ConceptDbLib.Services
                     {
                         CptProperty prop = propSearch.Properties[0];
                         prop.Name = newName;
-                        _db.SaveChanges();
+                        SaveDb();
                         return StaticMessages.PropertyNameChanged(libName, oldName, newName);
                     }
                     else
@@ -235,7 +469,7 @@ namespace ConceptDbLib.Services
                         Name = propName
                     };
                     lib.Properties.Add(newProp);
-                    _db.SaveChanges();
+                    SaveDb();
                     return StaticMessages.PropertyCreated(libName, propName);
                 }
             }
@@ -267,7 +501,7 @@ namespace ConceptDbLib.Services
                 CptObject obj = objSearch.Objects[0];
                 CptLibrary lib = libSearch.Libraries[0];
                 lib.Objects.Remove(obj);
-                _db.SaveChanges();
+                SaveDb();
                 return StaticMessages.ObjectDeleted(libName, objName);
             }
             else
@@ -298,7 +532,7 @@ namespace ConceptDbLib.Services
                             CptObject parent = parentObjSearch.Objects[0];
                             CptObject child = childObjSearch.Objects[0];
                             child.Parent = parent;
-                            _db.SaveChanges();
+                            SaveDb();
                             return StaticMessages.ParentChildObjRelationshipAdded(libName, parentName, childName);
                         }
                         else
@@ -314,7 +548,7 @@ namespace ConceptDbLib.Services
                         {
                             string pName = parent.Name;
                             child.Parent = null;
-                            _db.SaveChanges();
+                            SaveDb();
                             return StaticMessages.ParentChildObjectRelationshipSevered(libName, pName, childName);
 
                         }
@@ -344,7 +578,7 @@ namespace ConceptDbLib.Services
                 {
                     CptObject obj = objSearch.Objects[0];
                     obj.Name = newName;
-                    _db.SaveChanges();
+                    SaveDb();
                     return StaticMessages.ObjectRenamed(libName, oldName, newName);
                 }
                 else
@@ -413,7 +647,7 @@ namespace ConceptDbLib.Services
                             return StaticMessages.ObjectTypeNotFound(libName, objTypeName);
                         }
                     }
-                    _db.SaveChanges();
+                    SaveDb();
                     return StaticMessages.ObjectCreated(newObj.Id, newObj.Name);
                 }
                 else
@@ -454,7 +688,7 @@ namespace ConceptDbLib.Services
                         CptObjectType parent = newParentSearch.ObjectTypes[0];
                         CptObjectType child = objTypeSearch.ObjectTypes[0];
                         child.ParentType = parent;
-                        _db.SaveChanges();
+                        SaveDb();
                         return StaticMessages.ObjectTypeMoved(libName, objType, newParent);
                     }
                     else
@@ -483,7 +717,7 @@ namespace ConceptDbLib.Services
                 {
                     CptObjectType objType = objTypeSearch.ObjectTypes[0];
                     lib.ObjectTypes.Remove(objType);
-                    _db.SaveChanges();
+                    SaveDb();
                     return StaticMessages.ObjectTypeDeleted(libName, objTypeName);
                 }
                 else
@@ -510,7 +744,7 @@ namespace ConceptDbLib.Services
                     {
                         CptObjectType objType = editedTypeSearch.ObjectTypes[0];
                         objType.Name = newName;
-                        _db.SaveChanges();
+                        SaveDb();
                         return StaticMessages.ObjectTypeNameChanged(libName, oldName, newName);
 
                     }
@@ -546,7 +780,7 @@ namespace ConceptDbLib.Services
                         CptObjectType objType = new(newType);
                         lib.ObjectTypes.Add(objType);
                         parentObjTypeSearch.ObjectTypes[0].Children.Add(objType);
-                        _db.SaveChanges();
+                        SaveDb();
                         return StaticMessages.ObjectTypeAddedToLibrary(libName, parentType, newType);
                     }
                     else
@@ -573,8 +807,8 @@ namespace ConceptDbLib.Services
             if (search.Found)
             {
                 CptLibrary result = search.Libraries[0];
-                _db.Remove(result);
-                _db.SaveChanges();
+                _user.Account.Libraries.Remove(result);
+                SaveDb();
                 return StaticMessages.LibraryDeleted(result);
             }
             else
@@ -596,7 +830,7 @@ namespace ConceptDbLib.Services
                 {
                     CptLibrary lib = search.Libraries[0];
                     lib.Name = newName;
-                    _db.SaveChanges();
+                    SaveDb();
                     return StaticMessages.LibraryNameChanged(oldName, newName);
                 }
             }
@@ -621,7 +855,7 @@ namespace ConceptDbLib.Services
         }
         internal ConceptDbResponse ViewLibraryIndex()
         {
-            List<CptLibrary> libraryList = _db.Libraries.ToList();
+            List<CptLibrary> libraryList = _user.Account.Libraries.ToList();
             ConceptDbResponse response = StaticMessages.LibraryIndexRequested;
             foreach(CptLibrary library in libraryList)
             {
@@ -640,12 +874,12 @@ namespace ConceptDbLib.Services
             {
                 CptLibrary newLibrary = new();
                 newLibrary.Name = name;
-                _db.Libraries.Add(newLibrary);
-                _db.SaveChanges();
+                _user.Account.Libraries.Add(newLibrary);
+                SaveDb();
                 return StaticMessages.LibraryCreated(newLibrary.Id, name);
             }
         }
-        private CptLibrary? RetrieveLibrary(string name) => _db.Libraries.Where(e => e.Name == name).FirstOrDefault();
+        private CptLibrary? RetrieveLibrary(string name) => _user.Account.Libraries.Where(e => e.Name == name).FirstOrDefault();
         private DbSearchResult SearchLibrary(string name)
         {
             CptLibrary? result = RetrieveLibrary(name);

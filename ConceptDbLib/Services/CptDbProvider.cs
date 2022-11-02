@@ -11,10 +11,12 @@ namespace ConceptDbLib.Services
     {
         private ConceptContext db;
         public ConceptContext Context => db;
+        internal ValidationService ValidationService { get; set; }
         private static ConceptDbResponse DbInitializeOk => new(ConceptDbResponseId.Success, "Database initialization complete.", new() { string.Empty });
         public CptDbProvider()
         {
             db = NewContext;
+            ValidationService = new(this);
         }
         public ConceptDbResponse RemakeDb()
         {

@@ -1,4 +1,5 @@
 ﻿using CptClientShared.Entities;
+using CptClientShared.Entities.Accounting;
 using Microsoft.EntityFrameworkCore;
 
 namespace ConceptDbLib
@@ -13,6 +14,9 @@ namespace ConceptDbLib
         public DbSet<CptObjectNameValue> ObjNameValues => Set<CptObjectNameValue>();
         public DbSet<CptStringValue> StringValues => Set<CptStringValue>();
         public DbSet<CptNumberValue> NumberValues => Set<CptNumberValue>();
+        public DbSet<CptAccount> Accounts => Set<CptAccount>();
+        public DbSet<CptAcctType> AccountTypes => Set<CptAcctType>();
+        public DbSet<CptAcctUser> AccountUsers => Set<CptAcctUser>();
         //REMAINING CODE BELOW
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -93,6 +97,25 @@ namespace ConceptDbLib
                 .WithOne(e => e.Owner)
                 .HasForeignKey(e => e.OwnerId);
 
+            //ACCOUNTING
+
+            modelBuilder.Entity<CptAcctType>()
+                .HasMany(e => e.Accounts)
+                .WithOne(e => e.AccountType)
+                .HasForeignKey(e => e.AccountTypeId)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            modelBuilder.Entity<CptAccount>()
+                .HasMany(e => e.Users)
+                .WithOne(e => e.Account)
+                .HasForeignKey(e => e.AccountId)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            modelBuilder.Entity<CptAccount>()
+                .HasMany(e => e.Libraries)
+                .WithOne(e => e.Account)
+                .HasForeignKey(e => e.AccountId)
+                .OnDelete(DeleteBehavior.ClientCascade);
         }
     }
 }
